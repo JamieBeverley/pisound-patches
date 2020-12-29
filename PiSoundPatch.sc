@@ -120,7 +120,7 @@ PiSoundModule : Object{
 		Routine({
 			var lastSynth;
 			var lastOut;
-			0.5.wait;
+			1.wait;
 
 			this.inSynth = Synth.new(inName);
 			lastSynth = this.inSynth;
@@ -176,12 +176,13 @@ PiSoundModule : Object{
 
 
 	*start{
+		|delay=8|
 		Routine({
 			var delay,phaser,trem, reverb;
 			Server.default.boot;
 			MIDIClient.init;
 			MIDIIn.connectAll;
-			8.wait;
+			delay.wait;
 			delay = PiSoundEffect(
 				name: 'delay',
 				toggleMidiNote:48,
