@@ -15,7 +15,7 @@ PiSoundEffect : Object{
 	var <>knobs;
 	var <>name;
 	/*
-	(
+	(add t
 	21: [\gain, {|x| x*2/127}],
 	22: [\attack, {|x| x*2/127 }],
 	23: [\decay, {|x| x/127 }],
@@ -32,21 +32,23 @@ PiSoundEffect : Object{
 	var <>midiNote;
 	var <>midiCC;
 	var <>synth;
+	var <>verbose;
 
 	*new {
-		|name, toggleMidiNote, knobs, graphFunc|
-		var a = super.new(name, toggleMidiNote, knobs, graphFunc);
-		^a.initPiSoundEffect(name, toggleMidiNote, knobs, graphFunc);
+		|name, toggleMidiNote, knobs, graphFunc, verbose=false|
+		var a = super.new(name, toggleMidiNote, knobs, graphFunc, verbose);
+		^a.initPiSoundEffect(name, toggleMidiNote, knobs, graphFunc, verbose);
 	}
 
 	initPiSoundEffect {
-		|name,toggleMidiNote, knobs, graphFunc|
+		|name,toggleMidiNote, knobs, graphFunc, verbose|
 		this.name = name;
 		this.toggleMidiNote = toggleMidiNote;
 		this.knobs = knobs;
 		this.graphFunc = graphFunc;
 		this.bus = Bus.audio(Server.default, 2);
 		this.on = false;
+		this.verbose = verbose;
 		SynthDef(this.name, this.graphFunc).add;
 	}
 
@@ -62,7 +64,7 @@ PiSoundEffect : Object{
 			var spec = this.knobs[num];
 			var paramName = spec[0];
 			var value = spec[1].value(val);
-			[paramName, value].postln;
+			if(this.verbose,{[paramName, value].postln});
 			if(isNil(this.synth).not,this.synth.set(paramName, value));
 		},ccNum:this.knobs.keys);
 	}
