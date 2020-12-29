@@ -176,13 +176,13 @@ PiSoundModule : Object{
 
 
 	*start{
-		|delay=8|
+		|waitTime=8|
 		Routine({
 			var delay,phaser,trem, reverb;
 			Server.default.boot;
 			MIDIClient.init;
 			MIDIIn.connectAll;
-			delay.wait;
+			waitTime.wait;
 			delay = PiSoundEffect(
 				name: 'delay',
 				toggleMidiNote:48,
