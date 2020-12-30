@@ -21,14 +21,32 @@ var delay = PiSoundEffect(
 	name: 'delay',
 	toggleMidiNote:48,
 	knobs:(
-		1: [\delaytime, {|x| x*2/127}],
-		5: [\decaytime, {|x| x*8/127 }]
+		1: [\delay, {|x| x*2/127}],
+		5: [\delaytime, {|x| x*2/127 }]
 	),
 	graphFunc:	{
-		|dryBus, effectBus, delaytime, decaytime|
-		var dry = In.ar(dryBus, 2);
-		var audio = dry + CombC.ar(in:dry,maxdelaytime:4,delaytime:delaytime,decaytime:decaytime);
-		Out.ar(effectBus, audio);
+		|dryBus, effectBus, delay=0, delaytime=0.5|
+
+		var dry, signal;
+		var maxDelayTime = 4;
+		var decayTime;
+		var delayfeedback = delay;
+		delaytime = delaytime.linlin(0,1,0.1,1);
+		dry = In.ar(in, 2);
+
+		// Delay
+		signal = dry;
+		delayfeedback = delayfeedback.clip(0, 0.99);
+		delaytime = delaytime * if(lock, reciprocal(cps), 1);
+		delaytime = delaytime.clip(0, maxDelayTime); // just to be sure
+		decayTime = log2(-60.dbamp) / log2(delayfeedback) * delaytime;
+		decayTime = decayTime.clip(0, 20);
+
+		signal = CombL.ar(signal, maxDelayTime, delaytime.lag(1), decayTime);
+
+		signal = LeakDC.ar(signal) * delay.lag(0.01);
+		signal = dry + signal;
+		Out.ar(effectBus, signal);
 	}
 );
 
@@ -79,39 +97,20 @@ var reverb = PiSoundEffect(
 	name:'reverb',
 	toggleMidiNote:51,
 	knobs:(
-		4: [\room, {|x| x/127}],
-		8: [\size, {|x| pow(x/127,2)}]
+		4: [\reverb, {|x| pow(x/127, 3)}],
 	),
 	graphFunc:
 	{
-		|dryBus, effectBus, room=0, size=0|
-		var in, snd, loop, depth;
+		|dryBus, effectBus, reverb=0|
+		var z,y;
 		var dry = In.ar(dryBus, 2);
 
-		in = dry.asArray.sum;
-
-		in = in * room.lag(LFNoise1.kr(1).range(0.01, 0.02)); // regulate input
-
-		4.do { in = AllpassN.ar(in, 0.03, { Rand(0.005, 0.02) }.dup(2), 1) };
-
-		depth = size.lag(0.02).linexp(0, 1, 0.01, 0.98); // change depth between 0.1 and 0.98
-		loop = LocalIn.ar(2) * { depth + Rand(0, 0.05) }.dup(2);
-		loop = OnePole.ar(loop, 0.5);  // 0-1
-
-		loop = AllpassN.ar(loop, 0.05, { Rand(0.01, 0.05) }.dup(2), 2);
-
-		loop = DelayN.ar(loop, 0.3, [0.19, 0.26] + { Rand(-0.003, 0.003) }.dup(2));
-		loop = AllpassN.ar(loop, 0.05, { Rand(0.03, 0.15) }.dup(2), 2);
-
-		loop = loop + in;
-		loop = LeakDC.ar(loop);
-
-		LocalOut.ar(loop);
-
-		snd = loop;
-		snd = dry + snd * (1).lag(LFNoise1.kr(1).range(0.01, 0.02));
-
-		Out.ar(effectBus, snd);
+		// Reverb
+		z = DelayN.ar(dry, ((0.048)));
+		y = Mix.ar(Array.fill(7,{ CombL.ar(z, 0.1, LFNoise1.kr(0.1.rand, 0.04, 0.05), 15) }));
+		4.do({ y = AllpassN.ar(y, 0.050*size, [0.050.rand, 0.050.rand], 1) });
+		audio = dry+(reverb*y);
+		Out.ar(effectBus, audio);
 	}
 );
 
